@@ -27,7 +27,7 @@ def get_one_user(user_id):
 
 @blueprint.route('/api/users', methods=['POST'])
 def create_user():
-    required_columns = ['surname', 'name', 'age', 'position', 'speciality', 'address', 'email', 'password']
+    required_columns = ['surname', 'name', 'age', 'position', 'speciality', 'address', 'email', 'city_from', 'password']
     if not request.json:
         return make_response(jsonify({'error': 'Empty request'}), 400)
     elif not all(key in request.json for key in required_columns):

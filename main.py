@@ -11,6 +11,7 @@ from forms.department import AddDepartmentForm
 from flask_login import LoginManager, login_user, login_required, logout_user, current_user
 from requests import get, post, delete, put
 from flask_restful import Api
+from data import users_resource, jobs_resource
 
 app = flask.Flask(__name__)
 api = Api(app)
@@ -45,7 +46,7 @@ def main():
     # add_jobs()
     # add_departments()
 
-    # app.run()
+    app.run()
 
 
 def show_users():
@@ -382,7 +383,7 @@ def adddepartment():
         department.user.departments.append(department)
         db_sess.merge(department.user)
         db_sess.commit()
-        return flask.redirect('/')
+        return flask.redirect('/departments')
     return flask.render_template('adddepartment.html', title='работы',
                            form=form)
 
@@ -444,6 +445,12 @@ def deletedepartment(department_id):
 
 
 
+
+api.add_resource(users_resource.UserListResource, '/api/v2/users')
+api.add_resource(users_resource.UserResource, '/api/v2/users/<int:user_id>')
+
+api.add_resource(jobs_resource.JobsListResource, '/api/v2/jobs')
+api.add_resource(jobs_resource.JobsResource, '/api/v2/jobs/<int:job_id>')
 
 
 if __name__ == 'main':

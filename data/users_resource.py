@@ -1,61 +1,104 @@
-from flask_restful import reqparse, abort, Api, Resource
 import flask
-from data import db_session
-
+from . import db_session
+from flask_restful import reqparse, abort, Api, Resource
 from data.users import User
 from data.jobs import Jobs
-from data.departments import Department
 
 
-class NewsResource(Resource):
-    def get(self, news_id):
-        abort_if_news_not_found(news_id)
+
+def abort_if_user_not_found(user_id):
+    session = db_session.create_session()
+    user = session.query(User).get(user_id)
+    if not user:
+        abort(404, message=f"user {user_id} not found")
+
+
+class UserResource(Resource):
+    def get(self, user_id):
+        abort_if_user_not_found(user_id)
         session = db_session.create_session()
-        news = session.query(User).get(news_id)
-        return flask.jsonify({'news': news.to_dict(
-            only=('title', 'content', 'user_id', 'is_private'))})
+        user = session.query(User).get(user_id)
+        return flask.jsonify({'user': user.to_dict(only=('name', 'surname', 'age', 'position', 'speciality', 'address', 'email'))})
 
-    def delete(self, news_id):
-        abort_if_news_not_found(news_id)
+    def delete(self, user_id):
+        abort_if_user_not_found(user_id)
         session = db_session.create_session()
-        news = session.query(User).get(news_id)
-        session.delete(news)
+        user = session.query(User).get(user_id)
+        session.delete(user)
         session.commit()
         return flask.jsonify({'success': 'OK'})
 
+    def put(self, user_id):
+        abort_if_user_not_found(user_id)
+        args = parser.parse_args()
+        if not flask.request.json:
+            abort(404, message=f"Empty request")
+
+        required_columns = ['surname', 'name', 'age', 'position', 'speciality', 'address', 'email', 'city_from',
+                            'password']
+        if not all(key in flask.request.json for key in required_columns):
+            abort(400, message=f"Bad request")
+
+        session = db_session.create_session()
+        user = session.query(User).get(user_id)
+
+        user.surname=args['surname']
+        user.name=args['name']
+        user.age=args['age']
+        user.position=args['position']
+        user.speciality=args['speciality']
+        user.address=args['address']
+        user.email=args['email']
+        user.city_from=args['city_from']
+
+        user.set_password(args['password'])
+
+        session.add(user)
+        session.commit()
+        return flask.jsonify({'id': user.id})
 
 parser = reqparse.RequestParser()
-parser.add_argument('title', required=True)
-parser.add_argument('content', required=True)
-parser.add_argument('is_private', required=True, type=bool)
-parser.add_argument('is_published', required=True, type=bool)
-parser.add_argument('user_id', required=True, type=int)
+parser.add_argument('surname', required=True)
+parser.add_argument('name', required=True)
+parser.add_argument('age', required=True, type=int)
+parser.add_argument('position', required=True)
+parser.add_argument('speciality', required=True)
+parser.add_argument('address', required=True)
+parser.add_argument('email', required=True)
+parser.add_argument('city_from', required=True)
+parser.add_argument('password', required=True)
 
-
-class NewsListResource(Resource):
+class UserListResource(Resource):
     def get(self):
         session = db_session.create_session()
-        news = session.query(User).all()
-        return flask.jsonify({'news': [item.to_dict(
-            only=('title', 'content', 'user.name')) for item in news]})
+        user = session.query(User).all()
+        return flask.jsonify({'users': [item.to_dict(only=('name', 'surname', 'age', 'position', 'speciality', 'address', 'email', 'city_from')) for item in user]})
 
     def post(self):
         args = parser.parse_args()
         session = db_session.create_session()
-        news = News(
-            title=args['title'],
-            content=args['content'],
-            user_id=args['user_id'],
-            is_published=args['is_published'],
-            is_private=args['is_private']
+
+        if not flask.request.json:
+            abort(404, message=f"Empty request")
+
+        required_columns = ['surname', 'name', 'age', 'position', 'speciality', 'address', 'email', 'city_from',
+                            'password']
+        if not all(key in flask.request.json for key in required_columns):
+            abort(400, message=f"Bad request")
+
+        user = User(
+            surname=args['surname'],
+            name=args['name'],
+            age=args['age'],
+            position=args['position'],
+            speciality=args['speciality'],
+            address=args['address'],
+            email=args['email'],
+            city_from=args['city_from']
         )
-        session.add(news)
+
+        user.set_password(args['password'])
+
+        session.add(user)
         session.commit()
-        return flask.jsonify({'id': news.id})
-
-
-def abort_if_news_not_found(news_id):
-    session = db_session.create_session()
-    news = session.query(User).get(news_id)
-    if not news:
-        abort(404, message=f"News {news_id} not found")
+        return flask.jsonify({'id': user.id})
